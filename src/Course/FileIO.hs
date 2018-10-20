@@ -39,7 +39,7 @@ Problem --
 
 Consideration --
   Try to avoid repetition. Factor out any common expressions.
-  
+
 Example --
 Given file files.txt, containing:
   a.txt
@@ -61,7 +61,7 @@ To test this module, load ghci in the root of the project directory, and do
 Example output:
 
 $ ghci
-GHCi, version ... 
+GHCi, version ...
 Loading package...
 Loading ...
 [ 1 of 28] Compiling (etc...
@@ -81,51 +81,45 @@ the contents of c
 
 -- Given the file name, and file contents, print them.
 -- Use @putStrLn@.
-printFile ::
-  FilePath
-  -> Chars
-  -> IO ()
-printFile =
-  error "todo: Course.FileIO#printFile"
+printFile :: FilePath -> Chars -> IO ()
+printFile f c = putStrLn ("============ " ++ f)
+                >> putStrLn c
 
 -- Given a list of (file name and file contents), print each.
 -- Use @printFile@.
-printFiles ::
-  List (FilePath, Chars)
-  -> IO ()
-printFiles =
-  error "todo: Course.FileIO#printFiles"
+printFiles :: List (FilePath, Chars) -> IO ()
+printFiles Nil = putStrLn ""
+printFiles (head :. tail) = (uncurry printFile) head
+                            >> printFiles tail
 
 -- Given a file name, return (file name and file contents).
 -- Use @readFile@.
-getFile ::
-  FilePath
-  -> IO (FilePath, Chars)
-getFile =
-  error "todo: Course.FileIO#getFile"
+getFile :: FilePath -> IO (FilePath, Chars)
+getFile filePath = lift2 (,) (pure filePath) (readFile filePath)
 
 -- Given a list of file names, return list of (file name and file contents).
 -- Use @getFile@.
-getFiles ::
-  List FilePath
-  -> IO (List (FilePath, Chars))
-getFiles =
-  error "todo: Course.FileIO#getFiles"
+getFiles :: List FilePath -> IO (List (FilePath, Chars))
+-- getFiles (head:.tail) = lift3 (++) (getFile head)  (getFiles tail)
+getFiles Nil = pure Nil
+getFiles (h:.t) = lift2 (++) (getFile h >>= return . \x -> (x:.Nil)) (getFiles t)
+-- getFiles (h:.t) = lift2 (++) (lift1 (\x -> (x :. Nil)) (getFile h)) (getFiles t)
 
 -- Given a file name, read it and for each line in that file, read and print contents of each.
 -- Use @getFiles@ and @printFiles@.
-run ::
-  FilePath
-  -> IO ()
-run =
-  error "todo: Course.FileIO#run"
+run :: FilePath -> IO ()
+run filePath = readFile filePath
+               >>= return . lines
+               >>= getFiles
+               >>= printFiles
+
 
 -- /Tip:/ use @getArgs@ and @run@
-main ::
-  IO ()
-main =
-  error "todo: Course.FileIO#main"
-
+main :: IO ()
+main = getArgs >>= \args ->
+            case args of
+              filename :. Nil -> run filename
+              _ -> putStrLn "usage: runhaskell io.hs filename"
 ----
 
 -- Was there was some repetition in our solution?
