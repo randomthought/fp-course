@@ -35,12 +35,11 @@ newtype StateT s f a =
 -- >>> runStateT ((+1) <$> (pure 2) :: StateT Int List Int) 0
 -- [(3,0)]
 instance Functor f => Functor (StateT s f) where
-  (<$>) ::
-    (a -> b)
-    -> StateT s f a
-    -> StateT s f b
-  (<$>) =
-    error "todo: Course.StateT (<$>)#instance (StateT s f)"
+  (<$>) :: (a -> b) -> StateT s f a -> StateT s f b
+  (<$>) f (StateT a) = StateT $ \s -> let fa = a s
+                                          f'(a', s') = (f a', s')
+                                          in f' <$> fa
+    -- error "todo: Course.StateT (<$>)#instance (StateT s f)"
 
 -- | Implement the `Applicative` instance for @StateT s f@ given a @Monad f@.
 --
@@ -60,17 +59,14 @@ instance Functor f => Functor (StateT s f) where
 -- >>> runStateT (StateT (\s -> ((+2), s P.++ [1]) :. ((+3), s P.++ [1]) :. Nil) <*> (StateT (\s -> (2, s P.++ [2]) :. Nil))) [0]
 -- [(4,[0,1,2]),(5,[0,1,2])]
 instance Monad f => Applicative (StateT s f) where
-  pure ::
-    a
-    -> StateT s f a
-  pure =
-    error "todo: Course.StateT pure#instance (StateT s f)"
-  (<*>) ::
-   StateT s f (a -> b)
-    -> StateT s f a
-    -> StateT s f b
-  (<*>) =
-    error "todo: Course.StateT (<*>)#instance (StateT s f)"
+  pure :: a -> StateT s f a
+  pure a = StateT $ \s -> return (a, s)
+  (<*>) :: StateT s f (a -> b) -> StateT s f a -> StateT s f b
+  (<*>) (StateT f) (StateT a) = StateT $ \s -> do
+                                                (f', s1) <- f s
+                                                (a', s2) <- a s1
+                                                return (f' a', s2)
+    -- error "todo: Course.StateT (<*>)#instance (StateT s f)"
 
 -- | Implement the `Monad` instance for @StateT s f@ given a @Monad f@.
 -- Make sure the state value is passed through in `bind`.
@@ -81,12 +77,24 @@ instance Monad f => Applicative (StateT s f) where
 -- >>> let modify f = StateT (\s -> pure ((), f s)) in runStateT (modify (+1) >>= \() -> modify (*2)) 7
 -- ((),16)
 instance Monad f => Monad (StateT s f) where
-  (=<<) ::
-    (a -> StateT s f b)
-    -> StateT s f a
-    -> StateT s f b
-  (=<<) =
-    error "todo: Course.StateT (=<<)#instance (StateT s f)"
+  (=<<) :: (a -> StateT s f b) -> StateT s f a -> StateT s f b
+  (=<<) f (StateT k) =  StateT $ \s -> do
+                                       (a, s1) <- k s
+                                       (b, s2) <- runStateT (f a) s1
+                                       return (b, s2)
+
+
+
+
+  -- (=<<) f (StateT a) = StateT $ \s -> let a' = a s >>= return . fst
+  --                                         in _todo
+  -- (=<<) f (StateT a) = StateT $ \s -> let a' = a s >>= return . fst
+  --                                         b' = a' >>= (\x -> f x $ s)
+  --                                         in _todo
+  -- (=<<) f (StateT a) = StateT $ \s -> do
+  --   (a', _) <- a s
+  --   return . f a' $ s
+  -- (=<<) = error "todo: Course.StateT (=<<)#instance (StateT s f)"
 
 -- | A `State'` is `StateT` specialised to the `ExactlyOne` functor.
 type State' s a =
